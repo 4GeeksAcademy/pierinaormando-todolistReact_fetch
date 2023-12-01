@@ -32,27 +32,35 @@ const Home = () => {
 		const options = {
 			method: "DELETE"
 		};
-		const response = await fetch(urlUser, options);
-		if (response.ok) {
-			const data = await response.json();
-			console.log(data);
+
+		try {
+			const response = await fetch(urlUser, options);
+			if (response.ok) {
+				const data = await response.json();
+				console.log(data);
+			} else {
+				console.error('Error (deleteUser)', response.status, response.statusText);
+				// manejar la eliminación local en caso de un error, lo mismo para los demas metodos
+				setToDos([]);
+			}
+		} catch (error) {
+			console.error('Error en la solicitud (deleteUser):', error);
+			// manejar la eliminación local en caso de un error, lo mismo para los demas metodos
 			setToDos([]);
-		} else {
-			return ('Error (deleteUser)', response.status, response.statusText)
 		}
 	}
 
-	const addTask = async () => {
+
+
+	const updateTask = async (newTask) => {
 		const urlUser = url + '/user/' + user;
-		const newTask = { label: inputValue, done: false };
 
 		const options = {
 			method: 'PUT',
 			headers: {
 				'Content-Type': 'application/json',
 			},
-
-			body: JSON.stringify([...toDos, newTask]),
+			body: JSON.stringify([...toDos, newTask])
 		};
 
 		try {
@@ -60,26 +68,60 @@ const Home = () => {
 			if (response.ok) {
 				const data = await response.json();
 				console.log(data);
-				setToDos([...toDos, newTask]);
-				setInputValue("");
 			} else {
-
-				console.error('Error (addTask):', response.status, response.statusText);
-				const errorData = await response.json();
-				console.error('Detalles del error:', errorData);
+				console.error('Error (updateTask): ', response.status, response.statusText);
+				setToDos([...toDos, newTask]);
 			}
 		} catch (error) {
-			console.error('Error en la solicitud:', error);
+			console.error('Error en la solicitud (updateTask):', error);
+			setToDos([...toDos, newTask]);
 		}
 	};
 
-	const deleteTask = (index) => {
-		setToDos(toDos.filter((t, currentIndex) => index !== currentIndex));
-	};
 
-	/* 	const deleteAllTasks = async () => {
-	    
-		}; */
+	const addTask = (event) => {
+		if (event && event.preventDefault) {
+		   event.preventDefault();
+		}
+	 
+		if (inputValue.trim() === "") {
+		   return;
+		}
+	 
+		const newTask = { label: inputValue, done: false };
+		setToDos([...toDos, newTask]);
+		updateTask(newTask);
+		setInputValue("");
+	 };
+	 
+
+	const deleteTask = async (index) => {
+		const deletedTask = toDos[index];
+		setToDos(toDos.filter((t, currentIndex) => index !== currentIndex));
+
+		const urlUser = url + '/user/' + user;
+		const options = {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(toDos.filter((t, currentIndex) => index !== currentIndex))
+		};
+
+		try {
+			const response = await fetch(urlUser, options);
+			if (response.ok) {
+				const data = await response.json();
+				console.log(data);
+			} else {
+				console.error('Error (deleteTask - update API):', response.status, response.statusText);
+				setToDos([...toDos, deletedTask]);
+			}
+		} catch (error) {
+			console.error('Error en la solicitud (deleteTask - update API):', error);
+			setToDos([...toDos, deletedTask]);
+		}
+	};
 
 	const getTasks = async () => {
 		const urlUser = url + '/user/' + user;
@@ -94,11 +136,14 @@ const Home = () => {
 				setToDos(data);
 			} else {
 				console.error('Error (getTasks):', response.status, response.statusText);
+				setToDos([]);
 			}
 		} catch (error) {
-			console.error('Error en la solicitud:', error);
+			console.error('Error en la solicitud (getTasks):', error);
+			setToDos([]);
 		}
 	};
+
 
 	useEffect(() => {
 		getTasks();
@@ -113,9 +158,6 @@ const Home = () => {
 			</button>
 			<button type="button" className="btn btn-danger m-2" onClick={deleteUser}>
 				Delete User
-			</button>
-			<button type="button" className="btn btn-danger m-2">
-				Delete Tasks
 			</button>
 			<ul>
 				<li>
